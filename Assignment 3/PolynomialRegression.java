@@ -21,50 +21,68 @@ public class PolynomialRegression {
     }
 
     static double[][] inverse(double[][] a) {
-        int n = a.length;
-        double[][] aug = new double[n][2 * n];
+    int n = a.length;
+    double det = determinant(a);
 
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++)
-                aug[i][j] = a[i][j];
-            aug[i][i + n] = 1;
+    if (Math.abs(det) < 1e-12)
+        throw new ArithmeticException("Matrix is singular");
+
+    double[][] inv = new double[n][n];
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+
+            double[][] m = minor(a, i, j);
+            double cofactor = Math.pow(-1, i + j) * determinant(m);
+
+            inv[j][i] = cofactor / det;
         }
-
-        for (int i = 0; i < n; i++) {
-            int max = i;
-
-            for (int j = i + 1; j < n; j++)
-                if (Math.abs(aug[j][i]) > Math.abs(aug[max][i]))
-                    max = j;
-
-            double[] temp = aug[i];
-            aug[i] = aug[max];
-            aug[max] = temp;
-
-            double pivot = aug[i][i];
-
-            for (int j = 0; j < 2 * n; j++)
-                aug[i][j] /= pivot;
-
-            for (int j = 0; j < n; j++) {
-                if (j == i) continue;
-
-                double factor = aug[j][i];
-
-                for (int k = 0; k < 2 * n; k++)
-                    aug[j][k] -= factor * aug[i][k];
-            }
-        }
-
-        double[][] inv = new double[n][n];
-
-        for (int i = 0; i < n; i++)
-            for (int j = 0; j < n; j++)
-                inv[i][j] = aug[i][j + n];
-
-        return inv;
     }
 
+    return inv;
+}
+static double[][] minor(double[][] a, int row, int col) {
+    int n = a.length;
+    double[][] m = new double[n - 1][n - 1];
+
+    int r = 0;
+
+    for (int i = 0; i < n; i++) {
+        if (i == row) continue;
+
+        int c = 0;
+
+        for (int j = 0; j < n; j++) {
+            if (j == col) continue;
+
+            m[r][c++] = a[i][j];
+        }
+
+        r++;
+    }
+
+    return m;
+}
+static double determinant(double[][] a) {
+    int n = a.length;
+
+    if (n == 1)
+        return a[0][0];
+
+    if (n == 2)
+        return a[0][0] * a[1][1]
+             - a[0][1] * a[1][0];
+
+    double det = 0;
+
+    for (int j = 0; j < n; j++) {
+        det += Math.pow(-1, j)
+             * a[0][j]
+             * determinant(minor(a, 0, j));
+    }
+
+    return det;
+}
     static double[] fit(double[] x, double[] y, int degree) {
         double[][] X = new double[x.length][degree + 1];
 
@@ -201,7 +219,7 @@ public class PolynomialRegression {
                 bestTestError = testError;
                 bestDegree = degree;
                 bestCoefficients = coefficients;
-            }
+            }   
         }
 
         double validationError = mse(valX, valY, bestCoefficients);
